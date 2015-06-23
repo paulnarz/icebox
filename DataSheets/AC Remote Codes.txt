@@ -1,0 +1,6 @@
+button	decode_type	value	valueHEX	bits
+power	NEC	279939191	10AF8877	32
+up	NEC	279933071	10AF708F	32
+down	NEC	279949391	10AFB04F	32
+
+
