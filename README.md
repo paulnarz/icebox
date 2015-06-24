@@ -14,6 +14,9 @@ Test sketch for decoding IR codes.
 ### IRTest_Send
 Test sketch for sending IR codes to a device.
 
+### IRTest_Send_Keyboard
+Test sketch to listen for messages from the serial input and relay them to the RF transmitter.
+
 ### TemperatureReader
 Arduino sketch for periodically logging values from a temperature sensor.
 

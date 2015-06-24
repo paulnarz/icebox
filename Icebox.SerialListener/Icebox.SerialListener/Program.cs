@@ -16,12 +16,22 @@ namespace Icebox.SerialListener
         static bool _continue;
         static SerialPort _serialPort;
         static string _outputPath = "./../../../../logs/tempreader.txt";
+        static Dictionary<ConsoleKey, uint> _keyMappings;
 
         static void Main(string[] args)
         {
-
             _outputPath = Path.GetFullPath(_outputPath);
             Console.WriteLine(_outputPath);
+
+            _keyMappings = new Dictionary<ConsoleKey, uint>();
+            _keyMappings.Add(ConsoleKey.Enter, Convert.ToUInt32("0x10AF8877", 16));
+            _keyMappings.Add(ConsoleKey.UpArrow, Convert.ToUInt32("0x10AF708F", 16));
+            _keyMappings.Add(ConsoleKey.DownArrow, Convert.ToUInt32("0x10AFB04F", 16));
+
+            foreach (var mapping in _keyMappings)
+            {
+                Console.WriteLine("{0}\t{1}\t{1}", mapping.Key, mapping.Value);
+            }
 
             string portName = "COM3";
             int baudRate = 9600;
@@ -34,7 +44,7 @@ namespace Icebox.SerialListener
                 Console.WriteLine("   {0}", s);
             }
 
-            _serialPort = new SerialPort(portName, baudRate);            
+            _serialPort = new SerialPort(portName, baudRate);
             Console.WriteLine(" PortName: {0}", _serialPort.PortName);
             Console.WriteLine(" BaudRate: {0}", _serialPort.BaudRate);
 
@@ -43,24 +53,47 @@ namespace Icebox.SerialListener
             _continue = true;
             readThread.Start();
 
-            Console.WriteLine("Type QUIT to exit");
+            Console.WriteLine("ESC to exit");
 
             while (_continue)
             {
-                var message = Console.ReadLine();
+                var key = Console.ReadKey(true);
 
-                if (stringComparer.Equals("quit", message))
+                if (key.Key == ConsoleKey.Escape)
                 {
                     _continue = false;
                 }
-                else
+                else if (_keyMappings.ContainsKey(key.Key))
                 {
-                    _serialPort.WriteLine(message);
+                    var code = _keyMappings[key.Key];
+                    Console.WriteLine(code);
+                    var buffer = new byte[5];
+                    buffer[0] = (byte)'L';
+                    WriteUInt32ToBuffer(buffer, code, 4, 1);
+                    _serialPort.Write(buffer, 0, 5);
                 }
             }
 
             readThread.Join();
             _serialPort.Close();
+        }
+
+        private static void WriteUInt32ToBuffer(byte[] buffer, uint value, int bytes, int offset)
+        {
+            for (int i = 0; i < bytes; i++)
+            {
+                buffer[i + offset] = (byte)((value & (0xFFU << (i * 8))) >> (i * 8));
+            }
+        }
+
+        private static uint ReadUInt32FromBuffer(byte[] buffer, int bytes, int offset)
+        {
+            uint value = 0;
+            for (int i = 0; i < bytes; i++)
+            {
+                value += ((uint)buffer[i + offset]) << (i * 8);
+            }
+            return value;
         }
 
         public static void ReadRaw()
@@ -93,11 +126,11 @@ namespace Icebox.SerialListener
         }
 
         public static void ReadJson()
-        {                       
+        {
             while (_continue)
             {
                 try
-                {                    
+                {
                     string message = _serialPort.ReadLine();
                     Console.WriteLine(message);
                     var data = JsonConvert.DeserializeObject<TemperatureData>(message);
